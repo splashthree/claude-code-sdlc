@@ -7,9 +7,9 @@
 // with its reason. The list main built is shown as it came: the chip in the TopBand is its length
 // and nothing here re-counts it. A later row rises alone by its identity key, never a re-stagger.
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Bell, Check, GitPullRequest, Hand, Scale } from 'lucide-react'
+import { Bell, Bug, Check, GitPullRequest, Hand, Scale } from 'lucide-react'
 import type { CommandCenter, ConfirmTierResult, DecideDecisionResult, NeedsYouItem, SinceWindow, SprintVerbRequest, SprintVerbResult, StreamRow } from '../../../shared/types'
-import { CAPABILITIES, exitHeading, LOOP_EVENTS_TOTALS_ONLY, NO_DATA, NOTHING_NEEDS_YOU, STANDUP_NOTES, STREAM_ARRIVES, UNDATED } from '../../../shared/reasons'
+import { CAPABILITIES, exitHeading, LOOP_EVENTS_TOTALS_ONLY, NO_DATA, NOTHING_AWAITS_REVIEW, NOTHING_NEEDS_YOU, STANDUP_NOTES, STREAM_ARRIVES, UNDATED } from '../../../shared/reasons'
 import { businessDays, groupVerdicts } from '../../../shared/sprintModel'
 import { Button, Chip, cn, Disclosure, Eyebrow, Input, Segmented } from '../../ui'
 import { TODAY_ROW_RISE } from '../../motion/presets'
@@ -32,6 +32,9 @@ export interface TodayColumnProps {
    * row behind "N rows". The rail (default) draws every row and scrolls. */
   strip?: boolean
   className?: string
+  /** The Issues view (/sdlc-report-issue): the "awaiting review" line leans there. Absent → the
+   * line is text alone (a test that mounts the column without a host). */
+  onOpenIssues?: () => void
 }
 
 const ICON: Record<NeedsYouItem['kind'], typeof Bell> = { ack: Hand, review: GitPullRequest, decide: Scale, 'confirm-tier': Check }
@@ -88,7 +91,7 @@ export function streamSentence(r: Pick<StreamRow, 'text'>): string | null {
   return t.length > 0 ? t : null
 }
 
-export function TodayColumn({ cc, onRun, onDecide, onConfirmTier, onSince, onActed, claudeLine, strip = false, className }: TodayColumnProps) {
+export function TodayColumn({ cc, onRun, onDecide, onConfirmTier, onSince, onActed, claudeLine, strip = false, className, onOpenIssues }: TodayColumnProps) {
   const sprint = cc.sprint.data
   const verdictGroups = sprint ? groupVerdicts(sprint.verdictsPending) : []
   const hasLog = cc.capabilities.includes(CAPABILITIES.sprintLog)
@@ -113,7 +116,25 @@ export function TodayColumn({ cc, onRun, onDecide, onConfirmTier, onSince, onAct
             )), strip, 'needs-you-more', 'mt-2 space-y-2')}
           </ul>
         )}
+        {cc.issues && strip && (
+          <div data-testid="today-issues" className="pt-1">
+            <IssuesLine cc={cc} onOpenIssues={onOpenIssues} />
+          </div>
+        )}
       </section>
+
+      {/* Bugs in the product awaiting review (the command center's `issues` block, plugin 1.8.0): the
+          LENGTH of the plugin's queue — a count of reports, never of people — and the way to the
+          Issues view. As the RAIL it is its own group; as the STRIP (a four-column grid under 1240
+          px) it rides inside Needs you, so the grid keeps four columns and the lanes stay above the
+          fold (the 1280×800 probe). Absent block (an older plugin) → not drawn: there is nothing
+          honest to say about a list the plugin cannot produce. */}
+      {cc.issues && !strip && (
+        <section aria-labelledby="issues-title" className="space-y-2" data-testid="today-issues">
+          <Eyebrow as="h3" id="issues-title">Issues</Eyebrow>
+          <IssuesLine cc={cc} onOpenIssues={onOpenIssues} />
+        </section>
+      )}
 
       <section aria-labelledby="team-waiting-title" className="space-y-2">
         <Eyebrow as="h3" id="team-waiting-title">Team is waiting on</Eyebrow>
@@ -152,6 +173,24 @@ export function TodayColumn({ cc, onRun, onDecide, onConfirmTier, onSince, onAct
         <Button size="sm" variant="secondary" icon={Bell} disabled disabledReason={STANDUP_NOTES}>Standup notes</Button>
       </section>
     </section>
+  )
+}
+
+/** The one line: the plugin's queue length as a lean-to button, the fixed sentence when it is
+ * empty, the block's own error when the plugin could not produce the list. */
+function IssuesLine({ cc, onOpenIssues }: { cc: CommandCenter; onOpenIssues?: () => void }) {
+  const block = cc.issues!
+  if (!block.ok) return <p className="text-xs text-ink-3" title={block.source}>{block.error}</p>
+  if (block.data!.queue.length === 0) {
+    return <p className="text-xs text-ink-3" title={block.source}>{NOTHING_AWAITS_REVIEW}{block.data!.count > 0 ? ` · ${block.data!.count} on record` : ''}</p>
+  }
+  return (
+    <button type="button" data-pressable="" onClick={onOpenIssues} disabled={!onOpenIssues} title={block.source}
+      className="flex min-h-[44px] w-full items-center gap-3 rounded-[10px] border border-today-act-line bg-today-act-bg px-3 py-2 text-left text-sm text-today-act-ink hover:brightness-95 disabled:cursor-default">
+      <Bug size={16} aria-hidden="true" />
+      <span className="flex-1"><span data-stat="issues-awaiting" className="font-(--text-lane-count--font-weight) tabular-nums">{block.data!.queue.length}</span> awaiting review</span>
+      <span className="text-xs">Issues →</span>
+    </button>
   )
 }
 

@@ -19,6 +19,8 @@ A **command center** organised around the Build loop (`docs/proposals/togo-comma
 - **Plugin, additively:** `sprint.py list|log|carry|edit`, `spec_transition.py confirm-tier|assign`, `handoff.py --check`, `spec_readiness.py --all` + `ladder[]`, `record_findings.py report --json findings[]`, `spec_status.py` row + `deferred_reason`, ten `capabilities.py` entries — every existing verb's text and exit codes byte-identical.
 - **Kit:** Radix primitives under Dialog · Tooltip · HoverCard · Tabs · the `…` menu, `cmdk` under the palette; one Escape-owner list; 32 choreography rows that quieten with familiarity and whose end state equals a cold reload.
 
+- **Issues (plugin 1.8.0).** Bugs in the product the team builds, from report to fix: *Report an issue* asks the plugin's own questions (channel, environment, severity, data impact, the type of user, a real screenshot, a privacy statement) and writes through one line; the **Issues** view walks the lifecycle — triage by someone other than the reporter, prioritize into a sprint, promote to a `type: bugfix` spec slated into it — each a confirm dialog answered in the plugin's words, refused actions disabled with the plugin's own sentence. `/sdlc-report-issue` in Claude Code is the same record.
+
 ## The honesty rules kept (each one is a test)
 
 1. **The plugin is the only truth.** The renderer never spawns, never joins across sources, never derives a status. Main assembles one `CommandCenter` read model with per-block provenance (`source`, `fetchedAt`, `ok`, `data`); `noNewIpcInRenderer.test` fails if `ui/ motion/ palette/ scenes/ theme/ shortcuts/ stores/` ever reach `window.studio`.
@@ -39,10 +41,11 @@ A **command center** organised around the Build loop (`docs/proposals/togo-comma
 | pytest (`uv run --project scripts python -m pytest scripts/tests -q`) | 3622 passed · 19 skipped · protected list clean |
 | Playwright (`npm run pretest && npx playwright test`) | 173 passed · 3 skipped (176, one worker) |
 | Capture `observatory-v20` (1280×800 · 1440×900 · 1680×1000, light + dark) | 59 shots · 0 GPU console lines (24 warnings, all `THREE.Clock` deprecation) · overlap probe: every shot clean, exit 0 |
+| Capture `observatory-v21` (1440×900, light + dark; adds `issues`, `issues-dark`, `report-issue`) | 46 shots · 0 GPU console errors (`THREE.Clock` deprecation warnings only) · exit 0 |
 | Ghost probe (band above the sprint header at 1.2 / 1.6 / 2.0 / 2.5 s) | 0 deviating rows at every time, worst 1/255 |
 | Bundle (`--mode=test` main chunk) | 772.7 kB in Vite's report (754.6 KiB) · production 773.3 kB (755.2 KiB, gzip 234.2 kB) · budget 800 |
 
-## Screenshots to look at (`studio/test/screenshots/observatory-v20-*.png`)
+## Screenshots to look at (`studio/test/screenshots/observatory-v21-*.png`)
 
 The cockpit at three widths, light and dark: `sprint-home@1280`, `sprint-home@1440`, `sprint-home@1680` (+ `-dark@…`) — four lanes in one row, Today a rail, wells and rail ending on one line above the fold, chat as a rail. `planning@1440` / `planning-dark@1440` — the slate names every row. `spec-card@1440` — the Hand off foot with no sliver under it. `lifecycle-home@1440`. Then the walk: `sprint-home`, `sprint-home-dark`, `omnibar`, `planning`, `spec-card`, `lifecycle-home`, `review`, `review-dark`, `closing`, `closing-dark` (the shell un-offset), `steering`, `steering-light`, `board-list`, `board-graph` (plates under bodies), `sprint-graph`, `sprint-table`, `spec-view`, `stage-light`, `stage-dark-hover`, `palette`, `settings`, `welcome`, `welcome-dark`. The guide `docs/guide/togo-user-guide.html` is built from this series.
 

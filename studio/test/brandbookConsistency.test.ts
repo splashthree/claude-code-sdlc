@@ -97,6 +97,8 @@ describe('guides', () => {
       ['planning', 'planning-dark'], ['spec-card', 'spec-card-dark'], ['stage-light', 'stage-dark'], ['lifecycle-home', 'lifecycle-home-dark'],
       ['board-list', 'board-list-dark'], ['board-graph', 'board-graph-dark'], ['palette', 'palette-dark'], ['settings', 'settings-dark'],
       ['spec-view', 'spec-view-dark'], ['review', 'review-dark'], ['closing', 'closing-dark'], ['steering-light', 'steering'], ['welcome', 'welcome-dark'],
+      // Plugin 1.8.0: the Issues view (/sdlc-report-issue) is a command-center screen too.
+      ['issues', 'issues-dark'],
     ]
     for (const [light, dark] of pairs) {
       expect(produced.has(light), `light shot "${light}" is not produced`).toBe(true)
@@ -108,7 +110,9 @@ describe('guides', () => {
   // defaulted to v12 — the test was red at HEAD. The builder now defaults to the NEWEST series,
   // v13 (every v12 name has a v13 twin; the capture produced 59 shots), and the pin follows it.
   // Round 4 (the v14 verification pass): the builder moved to v14, the series the guide ships on.
-  it('the guide builder defaults to the v14 shots (the command center series, round 4)', () => {
-    expect(readFileSync(join(guideDir, 'build-user-guide.mjs'), 'utf8')).toContain("'observatory-v20'")
+  // Plugin 1.8.0: v22 — the series that adds the Issues view and the Report-an-issue dialog,
+  // captured on the build whose product name is SDLC Studio (v21 was the same screens under the old name).
+  it('the guide builder defaults to the v22 shots (the series with the Issues view)', () => {
+    expect(readFileSync(join(guideDir, 'build-user-guide.mjs'), 'utf8')).toContain("'observatory-v22'")
   })
 })
