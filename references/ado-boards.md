@@ -313,8 +313,15 @@ tag and a row note says why (`plan --kind domain` stops on the same contradictio
 `outcome:`, `domain:` and `fr:` are in `boards_contract.PLUGIN_TAG_PREFIXES` (as `boards_contract.RIDE_TAG_PREFIXES`):
 they are the repository's tags like every `sdlc:` one, so `merge_tags` replaces them and keeps a person's tags, a
 board-side removal of one is `SDLC_OWNED_DRIFT` that the next confirmed apply puts back, and a person's own tag
-(`team-alpha`) moving is still the board's. A board that already holds a person's tag spelled `domain:…` will have
-it treated as the mirror's.
+(`team-alpha`) moving is still the board's. A board that already holds a person's tag spelled `domain:…` — in any
+casing, so a capitalised `Type:Bug`, `Severity:High` or `Channel:Web` as much as `domain:…` — will have it treated as
+the mirror's: every plan shows a Tags row removing it and the next write strips it.
+
+**Tags are case-insensitive.** Azure Boards keeps an organisation's first-seen casing of a tag, so a tag the board
+holds in any casing satisfies the projection's tag, the mirror never issues a Tags op whose only difference is case,
+and a write it makes for another reason keeps the board's casing for every tag it keeps and the repository's only for
+a tag that is new; a case-only tag change on the board is `ADO_OWNED_CHANGE` (the board's), never drift
+(`ado_sync_model.tag_key`; `test_boards_live_fixes.py`).
 
 **Area mode is not implemented.** A domain fitted to an Area Path (`fit.domain.mode: area`, which needs domain
 names the fit can match to area nodes) still rides as its `domain:<slug>` tag, and the item's note says
@@ -446,8 +453,8 @@ access token alone cannot. So a plan that would PATCH a work item (an update row
 `comments.transport: history`) reads `connectionData` through `az rest` before anything else, and when that read
 fails `apply` refuses the whole plan as `identity_unknown` — exit 2, nothing sent — and says that the update
 transport needs an Entra sign-in to the Azure CLI as `--by`. Creates still go through `az devops invoke`; a plan
-with a comment needs the identity read anyway; so under a personal access token alone only a plan of creates can be
-applied. A successful read does not bind `--by` for an update (no words are written in anybody's name).
+with a comment needs the identity read anyway, and so does a create that is followed by a move (below); so under a
+personal access token alone only a plan of creates that need no move can be applied. A successful read does not bind `--by` for an update (no words are written in anybody's name).
 
 **What a refusal reads as** (`ado_wit_map.classify_write_error`, each from a captured stderr):
 
@@ -474,6 +481,19 @@ A query that prints nothing is read as no rows (`ado_wit.QueryIds.printed_nothin
 **The area path is set at create, and only then.** Every create sets `System.AreaPath` from `area_path` in
 `.sdlc/ado.yaml` (the plan shows the op); without it the live run's items landed at the project root, outside the
 team's board. An update never sends it, and a board-side move is the board's (`C`): `ADO_OWNED_CHANGE`, never drift.
+
+**A State the process does not allow at creation is reached by a move.** An Issue is created Active and moves to
+Closed, so a decided decision cannot be born Closed (the live run's `value_not_allowed` on DL-02). When the discovered
+transitions allow `initial -> State` but not `creation -> State`, the plan row's State op carries `via: <initial>`
+and the text reads `(created Active, then moved)`; `apply` creates the item in that state, ledgers it (it is linked
+from that moment) and sends one `test /rev` PATCH for the move, counted as a write like any other. If the board
+refuses the move the item stays created and linked: the row reads `created #N; moving it to Closed failed: …`, the next
+`plan` shows an `update` for the State (never a second create), and applying the same plan again tries the move once
+more. That update is offered only while the board is as the create left it (the item's revision is still the one the
+create returned): once anyone has touched the item -- a person closing it by hand, a move that landed unseen, a
+reopen -- the State is the board's again and is never pushed back. A State reachable in neither hop is a `validation`
+finding on a row that stays a create, and a type whose transitions were never read is created in one step as before
+(`test_boards_live_fixes.py`).
 
 **A comment moves the item's revision** (rev 2 to 3, `System.CommentCount` 1), and the comments API does not say to
 what. A plan read before someone's comment is stale after it (`rev_moved`: plan again); within one apply, an item this

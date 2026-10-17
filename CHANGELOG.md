@@ -367,6 +367,55 @@ spec card opens. Spec `0040-ado-boards-sync-and-catch-up.md` (MEDIUM).
   mirror except Fold B4's one pin and the capture tooling in (B), and the version: the four version files stay at
   2.1.0, which has not shipped.
 
+### Live-test fixes
+
+What the first run against a real organisation (RheemDevOps, 2026-10-15 to 17) found, each pinned by
+`scripts/tests/test_boards_live_fixes.py`. Only `scripts/ado_*.py`, tests, docs and this file change.
+
+- **Tags are compared the way Azure Boards compares them — without case.** An organisation keeps the first-seen
+  casing of a tag, so a plan that wanted `risk:HIGH` against an organisation that already owned `risk:high` got the item
+  back holding `risk:high`, and `plan` and `sync` offered the same `System.Tags + risk:HIGH - risk:high` row on every
+  run. A tag the board holds in any casing now satisfies the projection's tag (`ado_sync_model.tag_key`, the one
+  comparison), the mirror never issues a Tags op whose only difference is case, a write it must make for another
+  reason keeps the board's own casing for every tag it keeps and the repository's only for a genuinely new one
+  (`merge_tags`), a plugin prefix the board holds in any casing (`Risk:High`) is the repository's family rather than
+  a person's tag (so a person's capitalised `Type:Bug` or `Severity:High` is now the mirror's too: a plan shows a Tags
+  row removing it and the next write strips it), the by-tag ref match (`_tag_map`, `_other_refs`) is
+  case-insensitive, and a case-only tag change on the board is `ADO_OWNED_CHANGE` (owner `C`), never
+  `SDLC_OWNED_DRIFT`. A plan row for a real tag change no longer
+  names a tag only to re-spell it; no verb, flag, exit code or ledger line changed, and the plan-only golden is
+  byte-identical.
+- **A create whose State the process does not allow at creation is created in the initial state, then moved.** A
+  decided decision projects `System.State: Closed`, and an Issue is created Active: the live run's create of DL-02 was
+  refused as a `rule` row although the discovered process already knew `Active -> Closed`. The creation check now runs
+  for every create row (it only ran under `plan --validate`, and not at all for a type whose field list was unread):
+  where the process allows `initial -> State`, the State op carries `via` and the text reads `(created Active, then
+  moved)`, the plan hash covers it, and `cost` counts the extra write; apply creates the item, ledgers it, then sends
+  one `test /rev` PATCH. A refused move leaves the item created and linked (a `failed` update row, `created #N; moving
+  it to Closed failed`), the next `plan` offers the State as an update (also for a kind whose State the board owns,
+  through `state_pending` on the create's ledger line, and only while the item's revision is still the one the create
+  returned: once anyone has touched it the State is the board's again and is never pushed back) and never a second
+  create, and applying the same plan again retries the move. A State reachable in neither hop is a `validation`
+  finding on a row that stays a create; a type whose transitions were never read behaves as before. Existing pins
+  changed because the hand-written process creates a User Story in New, so spec 0004 (Ready) and 0005 are now
+  two-step creates there: eight tests in `test_boards_sync_apply.py`, `test_boards_sync_cli_b2.py`,
+  `test_boards_sync_cli_b3.py` and `test_boards_write_fixes.py` (each named in the commit) expect the extra write; a
+  plan with a move now needs the Entra sign-in an update needs.
+- **Review follow-up to the two fixes above.** `state_pending` used to outlive the board's own change of State: a
+  person who closed the item by hand left the flag on the create's ledger line, so a later reopen was pushed back to
+  Closed. The exception for an owed move now holds only while the item's revision is still the one the create
+  returned (`ado_sync_model.ownership_for_link` takes the board's item), the same revision the move tests. The
+  one-hop creation finding (`Issue does not allow creation -> Closed`, said under `plan --validate` when the second
+  hop is not known) has its pin back.
+- **Two-step creates told truthfully where a count or a dialog repeats them.** The `writes_per_run` note called a
+  row what is a write: one two-step create at a cap of 1 read `2 rows is over limits.writes_per_run (1)`. When a move
+  is among the writes it now reads `2 writes (1 row, 1 of them a create then a move) is over limits.writes_per_run
+  (1)`; with no two-step row the note is word for word what it was. Shepherd's apply dialog dropped `via`, so a
+  create in Active then moved to Closed was drawn as one write in Closed; it now keeps `via` and ends that op's line
+  with the plugin's words, `(created Active, then moved)`. The dialog shows a row count (`pendingRowCount`, a row is a
+  row however many writes it sends) and never a write count, so it has none to correct; the plan's `cost` block is
+  where writes are counted.
+
 ## 2.0.0 — 2026-10-12
 
 ### Shepherd — the brand update
